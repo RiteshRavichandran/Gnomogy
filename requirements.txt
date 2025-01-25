@@ -1,3 +1,5 @@
 PyGObject
 pyperclip
 emoji
+fuzzywuzzy
+python-Levenshtein

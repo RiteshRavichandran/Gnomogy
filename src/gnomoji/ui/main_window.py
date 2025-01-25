@@ -5,6 +5,8 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 from gnomoji.utils.emoji_data import load_emojis
 from gnomoji.clipboard import copy_to_clipboard
+from fuzzywuzzy import process
+import emoji
 
 
 class MainWindow(Gtk.Window):
@@ -32,14 +34,33 @@ class MainWindow(Gtk.Window):
 
         # Load emojis
         self.emojis = load_emojis()
-        self.load_emojis()
+        self.emoji_descriptions = [
+            emoji.EMOJI_DATA[char]["en"] for char in self.emojis
+        ]  # Precompute descriptions
+        self.load_all_emojis()  # Load all emojis initially
 
-    def load_emojis(self):
-        """Populate the flow box with emojis."""
+    def load_all_emojis(self):
+        """Populate the flow box with all emojis."""
+        self.clear_flow_box()
         for emoji_char in self.emojis:
             button = Gtk.Button(label=emoji_char)
             button.connect("clicked", self.on_emoji_clicked, emoji_char)
             self.flow_box.add(button)
+        self.flow_box.show_all()  # Ensure all buttons are visible
+
+    def load_top_matches(self, matches):
+        """Populate the flow box with the top 10 matched emojis."""
+        self.clear_flow_box()
+        for emoji_char in matches:
+            button = Gtk.Button(label=emoji_char)
+            button.connect("clicked", self.on_emoji_clicked, emoji_char)
+            self.flow_box.add(button)
+        self.flow_box.show_all()  # Ensure all buttons are visible
+
+    def clear_flow_box(self):
+        """Remove all children from the flow box."""
+        for child in self.flow_box.get_children():
+            self.flow_box.remove(child)
 
     def on_emoji_clicked(self, button, emoji_char):
         """Handle emoji button clicks."""
@@ -47,12 +68,43 @@ class MainWindow(Gtk.Window):
         copy_to_clipboard(emoji_char)
 
     def on_search_changed(self, entry):
-        """Filter emojis based on the search query."""
+        """Filter emojis based on the search query using fuzzy search."""
         query = entry.get_text().lower()
-        for child in self.flow_box.get_children():
-            if isinstance(child, Gtk.Button):
-                emoji_char = child.get_label()
-                if query in emoji_char.lower():  # Case-insensitive search
-                    child.show()
-                else:
-                    child.hide()
+
+        # Sanitize the query to remove non-text characters (e.g., emojis)
+        sanitized_query = "".join(
+            char for char in query if char.isalnum() or char.isspace()
+        )
+
+        # Update the search bar text if it was sanitized
+        if sanitized_query != query:
+            entry.set_text(sanitized_query)
+            entry.set_position(-1)  # Move the cursor to the end
+
+        # Perform fuzzy search on emoji descriptions
+        if sanitized_query:
+            # Find the top 10 closest matches using fuzzywuzzy
+            matches = process.extract(
+                sanitized_query, self.emoji_descriptions, limit=10
+            )
+
+            # Debug: Print the matches
+            print("Top 10 Matches:")
+            for desc, score in matches:
+                print(f"{desc}: {score}")
+
+            # Get the emoji characters for the top matches
+            matched_emojis = [
+                self.emojis[self.emoji_descriptions.index(desc)]
+                for desc, score in matches
+                if score > 50
+            ]  # Adjust threshold as needed
+
+            # Debug: Print the matched emojis
+            print("Matched Emojis:", matched_emojis)
+
+            # Load the top matches into the flow box
+            self.load_top_matches(matched_emojis)
+        else:
+            # If the search bar is empty, show all emojis
+            self.load_all_emojis()
