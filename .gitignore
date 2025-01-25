@@ -1,0 +1,48 @@
+# Virtual environment
+venv/
+.env/
+.venv/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build and distribution directories
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+
+# VS Code settings
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# Local development files
+*.local
+.env.local
+
+# IDE-specific files
+.idea/
+*.iml
+
+# Testing artifacts
+.coverage
+htmlcov/
+.pytest_cache/
+
+# macOS files
+.DS_Store
+
+# Windows files
+*.bak
+*.tmp
+*.swp
